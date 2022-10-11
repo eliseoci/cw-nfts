@@ -1,8 +1,10 @@
 use cosmwasm_schema::cw_serde;
-use cw721_base::MintMsg;
+
+use cosmwasm_std::Addr;
+use cw721_base::InstantiateMsg as Cw721InstantiateMsg;
 
 #[cw_serde]
-pub enum ExecuteMsg<T> {
-    /// Mint a new NFT, can only be called by the contract minter
-    Mint(MintMsg<T>),
+pub struct InstantiateMsg {
+    pub admin: Option<Addr>,
+    pub cw721_instantiate_msg: Cw721InstantiateMsg,
 }

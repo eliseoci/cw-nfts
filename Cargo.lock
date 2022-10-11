@@ -323,6 +323,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-storage-plus",
  "cw2",
  "cw721",
  "cw721-base",

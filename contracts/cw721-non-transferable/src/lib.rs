@@ -58,16 +58,16 @@ pub mod entry {
         match config.admin {
             Some(admin) => {
                 if admin == info.sender {
-                    return _execute(deps, env, info, msg.into());
+                    _execute(deps, env, info, msg)
                 } else {
-                    return Err(ContractError::Unauthorized {});
+                    Err(ContractError::Unauthorized {})
                 }
             }
             None => match msg {
                 ExecuteMsg::Mint(msg) => {
-                    return Cw721NonTransferableContract::default().mint(deps, env, info, msg)
+                    Cw721NonTransferableContract::default().mint(deps, env, info, msg)
                 }
-                _ => return Err(ContractError::Unauthorized {}),
+                _ => Err(ContractError::Unauthorized {}),
             },
         }
     }

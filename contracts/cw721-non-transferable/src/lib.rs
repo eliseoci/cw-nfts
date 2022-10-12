@@ -1,8 +1,13 @@
+pub use crate::msg::InstantiateMsg;
+use crate::state::{Config, CONFIG};
 use cosmwasm_std::Empty;
 pub use cw721_base::{
-    ContractError, Cw721Contract, Extension, InstantiateMsg, MintMsg, MinterResponse,
+    entry::execute as _execute, ContractError, Cw721Contract, ExecuteMsg, Extension, MintMsg,
+    MinterResponse,
 };
+
 pub mod msg;
+pub mod state;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw721-non-transferable";
@@ -14,8 +19,6 @@ pub type Cw721NonTransferableContract<'a> = Cw721Contract<'a, Extension, Empty, 
 #[cfg(not(feature = "library"))]
 pub mod entry {
     use super::*;
-
-    use crate::msg::ExecuteMsg;
     use cosmwasm_std::entry_point;
     use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
@@ -28,9 +31,18 @@ pub mod entry {
     ) -> Result<Response, ContractError> {
         cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        let res = Cw721NonTransferableContract::default().instantiate(deps, env, info, msg)?;
+        let config = Config { admin: msg.admin };
 
-        Ok(res
+        CONFIG.save(deps.storage, &config)?;
+
+        Cw721NonTransferableContract::default().instantiate(
+            deps,
+            env,
+            info,
+            msg.cw721_instantiate_msg,
+        )?;
+
+        Ok(Response::default()
             .add_attribute("contract_name", CONTRACT_NAME)
             .add_attribute("contract_version", CONTRACT_VERSION))
     }
@@ -40,12 +52,23 @@ pub mod entry {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg<Extension>,
+        msg: ExecuteMsg<Extension, Empty>,
     ) -> Result<Response, cw721_base::ContractError> {
-        match msg {
-            ExecuteMsg::Mint(msg) => {
-                Cw721NonTransferableContract::default().mint(deps, env, info, msg)
+        let config = CONFIG.load(deps.storage)?;
+        match config.admin {
+            Some(admin) => {
+                if admin == info.sender {
+                    return _execute(deps, env, info, msg.into());
+                } else {
+                    return Err(ContractError::Unauthorized {});
+                }
             }
+            None => match msg {
+                ExecuteMsg::Mint(msg) => {
+                    return Cw721NonTransferableContract::default().mint(deps, env, info, msg)
+                }
+                _ => return Err(ContractError::Unauthorized {}),
+            },
         }
     }
 

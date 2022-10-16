@@ -2,8 +2,8 @@ pub use crate::msg::InstantiateMsg;
 use crate::state::{Config, CONFIG};
 use cosmwasm_std::Empty;
 pub use cw721_base::{
-    entry::execute as _execute, ContractError, Cw721Contract, ExecuteMsg, Extension, MintMsg,
-    MinterResponse,
+    entry::execute as _execute, ContractError, Cw721Contract, ExecuteMsg, Extension,
+    InstantiateMsg as Cw721BaseInstantiateMsg, MintMsg, MinterResponse,
 };
 
 pub mod msg;
@@ -35,11 +35,17 @@ pub mod entry {
 
         CONFIG.save(deps.storage, &config)?;
 
+        let cw721_base_instantiate_msg = Cw721BaseInstantiateMsg {
+            name: msg.name,
+            symbol: msg.symbol,
+            minter: msg.minter,
+        };
+
         Cw721NonTransferableContract::default().instantiate(
             deps,
             env,
             info,
-            msg.cw721_instantiate_msg,
+            cw721_base_instantiate_msg,
         )?;
 
         Ok(Response::default()

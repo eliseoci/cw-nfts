@@ -1,37 +1,44 @@
-pub use crate::msg::InstantiateMsg;
-use crate::state::{Config, CONFIG};
+pub use crate::msg::{InstantiateMsg, QueryMsg};
 use cosmwasm_std::Empty;
 pub use cw721_base::{
-    entry::execute as _execute, ContractError, Cw721Contract, ExecuteMsg, Extension,
-    InstantiateMsg as Cw721BaseInstantiateMsg, MintMsg, MinterResponse,
+    entry::{execute as _execute, query as _query},
+    ContractError, Cw721Contract, ExecuteMsg, Extension, InstantiateMsg as Cw721BaseInstantiateMsg,
+    MintMsg, MinterResponse,
 };
 
 pub mod msg;
+pub mod query;
 pub mod state;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw721-non-transferable";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub type QueryMsg = cw721_base::QueryMsg<Empty>;
 pub type Cw721NonTransferableContract<'a> = Cw721Contract<'a, Extension, Empty, Empty, Empty>;
 
 #[cfg(not(feature = "library"))]
 pub mod entry {
     use super::*;
-    use cosmwasm_std::entry_point;
-    use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+    use crate::query::get_admin;
+    use crate::state::{Config, CONFIG};
+    use cosmwasm_std::{
+        entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    };
 
     #[entry_point]
     pub fn instantiate(
-        deps: DepsMut,
+        mut deps: DepsMut,
         env: Env,
         info: MessageInfo,
         msg: InstantiateMsg,
     ) -> Result<Response, ContractError> {
-        cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+        let admin_addr: Option<Addr> = msg
+            .admin
+            .as_deref()
+            .map(|s| deps.api.addr_validate(s))
+            .transpose()?;
 
-        let config = Config { admin: msg.admin };
+        let config = Config { admin: admin_addr };
 
         CONFIG.save(deps.storage, &config)?;
 
@@ -42,11 +49,14 @@ pub mod entry {
         };
 
         Cw721NonTransferableContract::default().instantiate(
-            deps,
+            deps.branch(),
             env,
             info,
             cw721_base_instantiate_msg,
         )?;
+
+        cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)
+            .map_err(ContractError::Std)?;
 
         Ok(Response::default()
             .add_attribute("contract_name", CONTRACT_NAME)
@@ -80,6 +90,9 @@ pub mod entry {
 
     #[entry_point]
     pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-        Cw721NonTransferableContract::default().query(deps, env, msg)
+        match msg {
+            QueryMsg::GetAdmin {} => to_binary(&get_admin(deps, env)?),
+            _ => _query(deps, env, msg.into()),
+        }
     }
 }

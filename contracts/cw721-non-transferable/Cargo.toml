@@ -3,7 +3,7 @@ name = "cw721-non-transferable"
 authors = [
   "Eliseo Cohen <eliseoci@users.noreply.github.com>",
 ]
-version = "0.1.0"
+version = "0.15.0"
 edition = "2021"
 description = "Non-transferable CW721 NFT example"
 license = "Apache-2.0"
